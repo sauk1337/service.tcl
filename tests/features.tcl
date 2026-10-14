@@ -260,5 +260,38 @@ service::qauth_onload
 check "no login when already authed (+x)" {![sent_match "*CHALLENGE*"] && $service::qauth_state eq "authed"}
 run_timers
 
+# --- adduser: Q auth host ------------------------------------------------------
+# small user store for these tests
+array set ::uhosts {owner {*!*@owner.users.quakenet.org} newbie {*!*user@1.2.3.4}}
+proc validuser h { info exists ::uhosts($h) }
+proc getuser {h type args} {
+	if {![validuser $h]} { error "No such user." }
+	if {$type eq "HOSTS"} { return $::uhosts($h) }
+	if {$type eq "XTRA"} { set k $h,[lindex $args 0]; return [expr {[info exists ::xtra($k)] ? $::xtra($k) : ""}] }
+	return ""
+}
+proc setuser {h type args} {
+	if {$type eq "HOSTS"} { lappend ::uhosts($h) [lindex $args 0] }
+	if {$type eq "XTRA"} { set ::xtra($h,[lindex $args 0]) [lindex $args 1] }
+}
+proc userlist args { array names ::uhosts }
+check "auth host added" {[service::add_authhost newbie someaccount] eq "*!*@someaccount.users.quakenet.org" && "*!*@someaccount.users.quakenet.org" in $::uhosts(newbie)}
+check "account linked" {$::xtra(newbie,account) eq "someaccount"}
+check "auth host not duplicated" {[service::add_authhost newbie SomeAccount] eq "" && [llength $::uhosts(newbie)] == 2}
+check "invalid account ignored" {[service::add_authhost newbie {bad name}] eq ""}
+# user without +x: account comes from WHOIS 330
+set ::uhosts(newbie2) {*!*user@5.6.7.8}
+set ::sent {}
+service::adduser_authhost newbie2 Newbie2 Owner
+check "WHOIS sent for user without +x" {[sent_match "WHOIS Newbie2"]}
+service::acctlookup_raw irc.quakenet.org 330 "TestBot Newbie2 nb2 :is authed as"
+service::acctlookup_raw irc.quakenet.org 318 "TestBot Newbie2 :End of /WHOIS list."
+check "auth host added from WHOIS" {"*!*@nb2.users.quakenet.org" in $::uhosts(newbie2) && [sent_match "NOTICE Owner :Also added Q auth host*"]}
+set ::uhosts(newbie3) {*!*user@9.9.9.9}
+set ::sent {}
+service::adduser_authhost newbie3 Newbie3 Owner
+service::acctlookup_raw irc.quakenet.org 318 "TestBot Newbie3 :End of /WHOIS list."
+check "not authed: only hostmask, adder told" {[llength $::uhosts(newbie3)] == 1 && [sent_match "*Newbie3 is not authed with Q*"]}
+
 puts "failures: $fails"
 if {$fails} { exit 1 }

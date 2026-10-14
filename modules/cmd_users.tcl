@@ -4,6 +4,42 @@
 # userlist, mytrigger).
 #####################################################################
 
+namespace eval service {
+	# WHOIS answers for adduser's Q account lookup
+	bind raw - {330} [namespace current]::acctlookup_raw
+	bind raw - {318} [namespace current]::acctlookup_raw
+}
+
+# Adds the user's Q auth host (*!*@<account>.users.quakenet.org) besides the
+# host they were added with. Users without +x: the account is looked up
+# with a WHOIS (330 "is authed as") and added when the answer arrives.
+proc service::adduser_authhost {hand who adder} {
+	if {[set acct [service::account $who]] ne ""} {
+		if {[set mask [service::add_authhost $hand $acct]] ne ""} {
+			putserv "NOTICE $adder :Also added Q auth host $mask to $hand."
+		}
+		return
+	}
+	set ::service::acctlookup([string tolower $who]) [list $hand $adder]
+	puthelp "WHOIS $who"
+}
+
+proc service::acctlookup_raw {from raw arg} {
+	set nick [string tolower [lindex [split $arg] 1]]
+	if {![info exists ::service::acctlookup($nick)]} { return 0 }
+	lassign $::service::acctlookup($nick) hand adder
+	unset ::service::acctlookup($nick)
+	if {$raw eq "330"} {
+		if {[set mask [service::add_authhost $hand [lindex [split $arg] 2]]] ne ""} {
+			putserv "NOTICE $adder :Also added Q auth host $mask to $hand."
+		}
+	} else {
+		# end of WHOIS without a 330 line: not authed with Q
+		putserv "NOTICE $adder :[lindex [split $arg] 1] is not authed with Q: only the hostmask was added to $hand."
+	}
+	return 0
+}
+
 # adduser, add
 proc service::cmd_adduser {nickname hostname handle channel text lastbind command} {
 	global botnick
@@ -47,7 +83,7 @@ proc service::cmd_adduser {nickname hostname handle channel text lastbind comman
 				putserv "NOTICE $nickname :ERROR: You do not have the required priviledges to add '$who' (#$hand) as 'global $level'."
 			} else {
 				adduser $hand $host
-				if {[set acct [service::account $who]] ne ""} { setuser $hand XTRA account $acct; service::acct_rebuild }
+				service::adduser_authhost $hand $who $nickname
 				chattr $hand $af
 				setuser $hand XTRA mytrigger "$service::trigger"
 				setuser $hand XTRA mytriggerset "[clock seconds]"
@@ -105,7 +141,7 @@ proc service::cmd_adduser {nickname hostname handle channel text lastbind comman
 			putserv "NOTICE $nickname :ERROR: You do not have the required priviledges to add '$who' (#$hand) as '$chan $level'."
 		} else {
 			adduser $hand $host
-			if {[set acct [service::account $who]] ne ""} { setuser $hand XTRA account $acct; service::acct_rebuild }
+			service::adduser_authhost $hand $who $nickname
 			chattr $hand |$af $chan
 			setuser $hand XTRA mytrigger "$service::trigger"
 			setuser $hand XTRA mytriggerset "[clock seconds]"

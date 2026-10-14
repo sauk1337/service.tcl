@@ -276,6 +276,25 @@ proc service::acct_rebuild {} {
 	}
 }
 
+# Adds the Q hidden host of an account (*!*@<account>.users.quakenet.org) to
+# a user, and links the account if the user has none, so a user added with
+# their real host is still recognised after they auth and set +x.
+# Returns the mask added, or "" when there was nothing to add.
+proc service::add_authhost {hand acct} {
+	if {$acct eq "" || ![validuser $hand]} { return "" }
+	if {![regexp {^[A-Za-z0-9\[\]\\`^\{\}|_-]+$} $acct]} { return "" }
+	if {[getuser $hand XTRA account] eq ""} {
+		setuser $hand XTRA account $acct
+		service::acct_rebuild
+	}
+	set mask "*!*@$acct.users.quakenet.org"
+	foreach host [getuser $hand HOSTS] {
+		if {[string equal -nocase $host $mask]} { return "" }
+	}
+	setuser $hand HOSTS $mask
+	return $mask
+}
+
 # Handle for a nickname: the given handle when it is valid, otherwise the
 # user whose Q account matches the nickname's account, otherwise "*".
 proc service::resolve {nickname {handle "*"}} {

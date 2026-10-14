@@ -192,7 +192,7 @@ unzip ~/service-*.zip            # crea scripts/service/
 Para subirlo desde Windows, usa PowerShell (trae `scp`) o WinSCP / FileZilla (SFTP):
 
 ```powershell
-scp service-6.0.0.zip eggdrop@IP_DEL_SERVIDOR:~/
+scp service-6.1.0.zip eggdrop@IP_DEL_SERVIDOR:~/
 ```
 
 **B) Git:**
@@ -275,7 +275,7 @@ Después reinicia el bot. En la partyline: `.restart`. La primera vez es mejor r
 En el log (`tail -f ~/eggdrop/logs/*.log`) o en la partyline debe aparecer:
 
 ```
-service.tcl - v6.0.0 - ... - 15 modules (...) - 101 commands - loaded in X ms
+service.tcl - v6.1.0 - ... - 15 modules (...) - 101 commands - loaded in X ms
 service.tcl - authenticated with Q as MiBot
 ```
 

@@ -49,7 +49,7 @@ All settings live in `service.conf`; every option is also commented there.
    ```
 5. Start the bot, or `.rehash` from the partyline. The log should show:
    ```
-   service.tcl - v6.0.0 - r0t3n aka Eagle (#r0t3n) - 15 modules (...) - 99 commands - loaded in X ms
+   service.tcl - v6.1.0 - r0t3n aka Eagle (#r0t3n) - 15 modules (...) - 99 commands - loaded in X ms
    ```
 
 `service.conf` is never overwritten by the updater and is ignored by git, so your settings and your Q password are never published.
@@ -212,7 +212,7 @@ $account #handle SomeAccount  link a handle to an account
 $account #handle -            remove the link
 ```
 
-`adduser` links the account automatically when the user is authed. The account is read from Eggdrop's account tracking (Eggdrop 1.9 + WHOX on QuakeNet) or from the +x host. Users without +x are recognised once Eggdrop has learned their account (for example after the bot's WHO on join).
+`adduser` links the account automatically when the user is authed, and also adds the account's hidden host `*!*@account.users.quakenet.org` to the user, so someone added with their real host (no +x) is still recognised by hostmask after they set +x. The account is read from Eggdrop's account tracking (Eggdrop 1.9 + WHOX on QuakeNet) or from the +x host; when neither knows it, the bot sends a WHOIS and uses the "is authed as" line. You get a notice with the host added, or one saying the user isn't authed (then only the normal hostmask is stored). Users without +x are otherwise recognised once Eggdrop has learned their account (for example after the bot's WHO on join).
 
 ## 7. Saved ops
 

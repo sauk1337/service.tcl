@@ -3,6 +3,15 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [6.1.0] - 2026-10-14
+
+### Added
+- `adduser` also adds the user's Q auth host (`*!*@account.users.quakenet.org`)
+  next to the host they were added with, and links the account. For users
+  without +x whose account Eggdrop doesn't know yet, the bot looks it up with
+  a WHOIS (330 "is authed as"). The person who ran `adduser` is told which
+  host was added, or that the user isn't authed with Q.
+
 ## [6.0.0] - 2026-10-14
 
 First public release by sauk1337, based on r0t3n's `service.tcl` v40.1 (2020).

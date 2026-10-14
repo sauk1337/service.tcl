@@ -192,7 +192,7 @@ unzip ~/service-*.zip            # creates scripts/service/
 To upload it from Windows, use PowerShell (`scp` is built in) or WinSCP / FileZilla (SFTP):
 
 ```powershell
-scp service-6.0.0.zip eggdrop@SERVER_IP:~/
+scp service-6.1.0.zip eggdrop@SERVER_IP:~/
 ```
 
 **B) Git:**
@@ -275,7 +275,7 @@ Then restart the bot. In the partyline: `.restart`. A restart is better than `.r
 In the log (`tail -f ~/eggdrop/logs/*.log`) or the partyline you should see:
 
 ```
-service.tcl - v6.0.0 - ... - 15 modules (...) - 101 commands - loaded in X ms
+service.tcl - v6.1.0 - ... - 15 modules (...) - 101 commands - loaded in X ms
 service.tcl - authenticated with Q as MyBot
 ```
 
