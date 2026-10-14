@@ -1,0 +1,276 @@
+#####################################################################
+# service.tcl - configuration file
+#
+# Copy this file to service.conf (same folder as service.tcl) and edit it:
+#   cp service.conf.example service.conf
+# service.conf is never overwritten by the updater and is ignored by git,
+# so your settings and your Q password stay private.
+# Full explanation of every option: docs/MANUAL.md
+#####################################################################
+
+# --- Modules -------------------------------------------------------
+# Optional modules you don't want to load (core and crypto are required).
+# Available: protect takeover qnet spamscan onjoin botnet
+#            cmd_users cmd_settings cmd_channel cmd_q cmd_admin help updater
+# Example:   variable disabled_modules {spamscan}
+variable disabled_modules {}
+
+# --- Channels ------------------------------------------------------
+# homechan  : your main/support channel (shown in kick messages)
+# adminchan : staff channel where the bot reports ops/deops/kicks/bans
+# helpchan  : help channel (can be the same as homechan)
+variable homechan "#yourchannel"
+variable adminchan "#yourchannel.staff"
+variable helpchan "#yourchannel"
+
+channel add $homechan; channel add $adminchan; channel add $helpchan; save
+
+# --- Q (QuakeNet) authentication ------------------------------------
+# The bot logs in to Q on connect when user and pass are set (empty = off).
+#  method   : "challenge" = CHALLENGEAUTH with HMAC-SHA-256 (recommended:
+#             the password is never sent) - "auth" = plain AUTH
+#  hidehost : 1 = set user mode +x (hide the IP) after logging in
+#  waitjoin : 1 = don't join channels until logged in, so the IP is never
+#             shown in a channel (channels are joined anyway after timeout)
+#  timeout  : seconds to wait for Q before joining channels anyway
+# Keep this file private (chmod 600 service.conf).
+variable qauth
+array set qauth {
+	"user" ""
+	"pass" ""
+	"method" "challenge"
+	"hidehost" "1"
+	"waitjoin" "1"
+	"timeout" "30"
+}
+
+# --- Takeover protection ---------------------------------------------
+# Works on channels with protection enabled ($protect on). When one user
+# does <deops> deops, <kicks> kicks or <bans> bans within <window> seconds:
+#  - the bot deops/kick-bans the attacker (if it has op)
+#  - recover  : 1 = Q RECOVER + OP (if the attack included deops or the bot
+#               lost op); the bot needs +m in Q's chanlev
+#  - qban     : 1 = Q TEMPBAN of the attacker for qban_time (bot needs +o in Q)
+#  - qchanlev : 1 = remove the attacker's Q chanlev (qchanlev_flags), and
+#               also qchanlev_owner_flags (only works if the bot is +n in Q)
+#  - lockdown : modes set for lockdown_time seconds ("" = no lockdown)
+#  - reop     : 1 = re-op users with op access / saved ops after RECOVER
+#  - notify   : 1 = report to the admin channel
+#  exempt   : Eggdrop flags that are never treated as attackers (global|chan)
+#  ban_time : minutes of the bot's own ban on the attacker
+#  0 in deops/kicks/bans disables that trigger.
+variable takeover
+array set takeover {
+	"deops" "3"
+	"kicks" "3"
+	"bans" "3"
+	"window" "10"
+	"exempt" "bn|n"
+	"recover" "1"
+	"qban" "1"
+	"qban_time" "1h"
+	"qchanlev" "1"
+	"qchanlev_flags" "-aogvt"
+	"qchanlev_owner_flags" "-mn"
+	"lockdown" "+im"
+	"lockdown_time" "300"
+	"reop" "1"
+	"ban_time" "120"
+	"notify" "1"
+}
+
+# --- Q commands -------------------------------------------------------
+# bantime : default duration for qban when none is given
+variable qcmd
+array set qcmd {
+	"bantime" "1h"
+}
+
+# --- On-join checks and peak -------------------------------------------
+# whoischeck(delay): seconds after a join before the WHOIS for the
+#                   authban/badchan/vip checks (users who leave are skipped)
+# peak(announce)  : 1 = announce a new user record in the channel
+variable whoischeck
+array set whoischeck {
+	"delay" "3"
+}
+variable peak
+array set peak {
+	"announce" "1"
+}
+
+# --- Botnet (mutual protection between linked bots) --------------------
+# enabled        : 1 = ask linked bots for op/invite/unban/key/limit and help them
+# flag           : flag a linked bot's handle needs (global or channel) to be
+#                  trusted, in addition to the bot flag +b
+# share_takeover : 1 = tell linked bots about a takeover so they ban the attacker
+# See docs/MANUAL.md for how to link two bots.
+variable botnet
+array set botnet {
+	"enabled" "0"
+	"flag" "o"
+	"share_takeover" "1"
+}
+
+# --- Updater (GitHub) ---------------------------------------------------
+# interval : hours between checks (0 = never check automatically). New
+#            versions are only announced; a global owner installs them with
+#            the "update apply" command.
+# repo     : GitHub repository (user/name)
+# source   : "release" = latest GitHub release (recommended) - "branch"
+# branch   : branch used when source is "branch"
+# cafile   : CA bundle for HTTPS (empty = auto-detect)
+# Needs the Tcl tls package (Debian/Ubuntu: apt install tcl-tls).
+variable update
+array set update {
+	"interval" "6"
+	"repo" "sauk1337/service.tcl"
+	"source" "release"
+	"branch" "main"
+	"cafile" ""
+}
+
+# --- Tcl debug command ------------------------------------------------
+# Format: "<flags> <procname>". Lets users with <flags> run the proc
+# <procname> through the "tcl" command. Disabled by default ("").
+variable tcldebug ""
+
+# --- Runtime arrays (do not edit) -------------------------------------
+foreach arr {onjoin whois saveops errorcount topic adduser} {
+	variable $arr
+	if {![array exists $arr]} {
+		array set $arr {}
+	}
+}
+
+if {![array exists clonescan]} {
+	array set clonescan {
+		"maxclones" "5"
+		"hosttype" "1"
+	}
+}
+
+# --- Kick messages -----------------------------------------------------
+# Keywords are replaced at runtime (:channel:, :id:, :nickname:, ...).
+variable kickmsg
+array set kickmsg {
+	"protkick" "You are not allowed to :violate: on :channel: - (ID: :id:) - (by :homechan:)"
+	"userkick" "You were kicked on :channel: by :nickname: - Reason: :reason: - (ID: :id:)"
+	"badchan" "You are on a bad channel (:badchan:) - (ID: :id:)"
+	"authban" "Your Q account ':authname:' is banned from :channel: - (ID: :id:)"
+	"userban" "You are banned from :channel: by :nickname: - (Reason: :reason:) - (ID: :id:)"
+	"known" "Authorized users only on :channel: - (ID: :id:)"
+	"badword" "Detected :found: badword(s): :badword: - (ID: :id:)"
+	"antiadvertise" "Advertising in :channel: is not allowed - (ID: :id:)"
+	"clonescan" "Too many clones from your host ':hostname:' (:clones:/:maxclones:) - (ID: :id:)"
+	"gban" "You are GLOBAL BANNED by :homechan: staff - (Reason: :reason:) - (Global-ID: :id:)"
+	"defaultban" "You are BANNED from this channel"
+}
+
+variable defaultreason "none specified"
+
+variable bantime
+array set bantime {
+	"modeprot" "120"
+	"kickprot" "60"
+	"spamscan" "5"
+	"clonescan" "10"
+	"default" "30"
+}
+
+# --- VIP --------------------------------------------------------------
+variable vipskin "\002\00315,1•\002\00312 VIP: :nickname: \002(\002 :hostname: \002)\002 \002\00315,1•\002"
+variable vipmode "+"
+
+# --- Command triggers -------------------------------------------------
+variable trigger "\$"
+variable triggers { $ ! ? & * % ^ - + ~ }
+
+# --- Spamscan ---------------------------------------------------------
+if {[array exists spamscan]} {
+	array unset spamscan
+}
+
+variable spamscan
+array set spamscan {
+	"killpoints" "8"
+	"kickon" "15"
+	"banon" "20"
+	"duration" "2"
+	"warnuser" "1"
+	"warnmsg" "You are violating :channel: and/or :network: rules. Please cease your abuse (Your points: :points:)."
+	"kickmsg" "You have violated :channel: and/or :network: rules. Cease your abuse! (Points: :points:)"
+	"banmsg" "You have violated :channel: and/or :network: rules! (Points: :points: ID: :id:)"
+	"bold" "5"
+	"color" "5"
+	"underline" "5"
+	"reverse" "5"
+	"action" "5"
+	"caps" "10"
+	"repeat" "15"
+	"spam" "20"
+	"advertise" "15"
+	"chanflood" "30:10"
+	"repeatflood" "3:10"
+	"userflood" "5:2"
+}
+
+# Words/channels/URLs that are never treated as advertising
+variable protectedwords {
+	"#yourchannel"
+	"#yourchannel.staff"
+	"www.example.com"
+}
+
+# --- Flood ------------------------------------------------------------
+variable flood
+if {[array exists flood]} {
+	array unset flood
+}
+
+array set flood {
+	"lockmodes" "mr"
+	"massmodes" "mir"
+}
+
+variable spam
+if {![array exists spam]} {
+	array set spam {}
+}
+
+# --- Welcome ------------------------------------------------------------
+variable welcomeskin "\[:channel: - :date: - :time:\] Welcome :nickname: (:hostname:) to our channel! (JoinID: #:id:)"
+
+# --- Channel flags (used by the chanflags command) --------------------
+if {[array exists chanflags]} {
+	array unset chanflags
+}
+
+array set chanflags {
+	"o" "service_ao auto-op"
+	"v" "service_av auto-voice"
+	"p" "service_prot protection"
+	"h" "service_prot_hard hardprotection"
+	"b" "service_bitchmode bitchmode"
+	"B" "service_badword badwords"
+	"s" "service_spamscan spamscan"
+	"w" "service_welcome welcome"
+	"t" "service_topic_safe topicsave"
+	"f" "service_topic_force forcetopic"
+	"C" "service_clonescan clonescan"
+	"K" "service_known knownonly"
+	"e" "enforcebans enforcebans"
+	"d" "dynamicbans dynamicbans"
+	"V" "service_vip vip"
+	"a" "service_authban authbans"
+	"A" "service_antiadvertise antiadvertise"
+	"c" "service_badchan badchan"
+	"F" "service_flyby flyby"
+	"l" "service_autolimit autolimit"
+	"P" "service_peak peak"
+	"m" "service_enforcemodes enforcemodes"
+}
+
+# --- Netsplit messages --------------------------------------------------
+variable netsplit_start "A netsplit has been detected - Some functions have been disabled."
+variable netsplit_end "The netsplit is now considered over after :time: - All functions enabled again."

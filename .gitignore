@@ -1,0 +1,21 @@
+# Local backups of r0t3n's v40.1 (contain old credentials - never publish)
+original/
+*.bkup
+*.bak
+*.orig
+
+# Runtime data
+logs/
+service/topic/
+
+# r0t3n's modular v5.2 (reference only, not part of this repo)
+service-master/
+
+# Your configuration (may contain your Q password) - copy it from service.conf.example
+service.conf
+.qauth-held
+.update/
+backup/
+
+# release zips
+dist/

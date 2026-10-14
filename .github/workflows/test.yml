@@ -1,0 +1,21 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Tcl
+        run: sudo apt-get update && sudo apt-get install -y tcl
+      - name: SHA-256 / HMAC / CHALLENGEAUTH test vectors
+        run: tclsh tests/crypto.tcl
+      - name: Smoke test (load, compile, every command)
+        run: tclsh tests/smoke.tcl
+      - name: Feature tests (auth, takeover, Q, botnet, help...)
+        run: tclsh tests/features.tcl
+      - name: Release manifest is up to date
+        run: tclsh tools/manifest.tcl --check
